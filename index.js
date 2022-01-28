@@ -1,4 +1,5 @@
 import { World } from 'picoes'
+import si from 'systeminformation'
 
 const NUM_COMPS = 200
 const NUM_ENTITIES = 1000
@@ -145,4 +146,10 @@ function log(...args) {
 	console.error(...args)
 }
 
-runBench(picoBench)
+async function main() {
+	const cpu = await si.cpu()
+	log(`CPU: ${cpu.manufacturer} ${cpu.brand} (${cpu.cores}-core)`)
+	runBench(picoBench)
+}
+
+await main()

@@ -1,1 +1,2 @@
-picoes: PASS, 3800.82 ent/ms
+CPU: AMD Ryzen 9 5900HS with Radeon Graphics (16-core)
+picoes: PASS, 3868.64 ent/ms
