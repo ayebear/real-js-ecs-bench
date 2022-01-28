@@ -6,3 +6,16 @@ Please also see:
 
 -   [https://github.com/ddmills/js-ecs-benchmarks](https://github.com/ddmills/js-ecs-benchmarks)
 -   [https://github.com/noctjs/ecs-benchmark](https://github.com/noctjs/ecs-benchmark)
+
+# Latest results
+
+[results.txt](results.txt)
+
+# Run
+
+```
+npm ci
+npm run bench
+```
+
+Results are written to `results.txt`.
