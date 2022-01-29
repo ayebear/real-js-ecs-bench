@@ -1,14 +1,40 @@
 import { log } from './log.js'
 import { SHA3 } from 'sha3'
 
-const NUM_COMPS = 200
+const HASH_SIZE = 256
 const NUM_ENTITIES = 1000
-const NUM_DUPE_HASH_ENTITIES = 10
+const NUM_COMPS = 200 // Must be less than HASH_SIZE
+const NUM_SOME_COMPS = HASH_SIZE / 8 - 1
+const TO_REMOVE_MOD = 4
 const EXPECTED_COUNT = 25160000
-const hash = new SHA3(256) // Must be more bits than NUM_COMPS
+const sha3 = new SHA3(HASH_SIZE)
 
 function runBench(bench) {
+	// Run benchmark suite, count entity hits
 	const now = Date.now()
+	const data = bench.setup(NUM_COMPS, NUM_ENTITIES)
+	const state = { count: 0, entities: [], toRemove: [] }
+	init(data, state)
+	log(state)
+	runQueries(data, state)
+	datasetChallenge(data, state)
+
+	// Calculate score (entities processed per millisecond)
+	const time = Date.now() - now
+	const score = EXPECTED_COUNT / time
+	if (state.count === EXPECTED_COUNT) {
+		log(`${bench.name}: PASS, ${score.toFixed(2)} ent/ms`)
+	} else {
+		log(
+			`${bench.name}: FAIL, completed ${state.count} queries (${(
+				(state.count / EXPECTED_COUNT) *
+				100
+			).toFixed(5)}%)`
+		)
+	}
+}
+
+function init(data, state) {
 	const {
 		components,
 		addEntity,
@@ -16,8 +42,64 @@ function runBench(bench) {
 		addComponent,
 		removeComponent,
 		queryEntities,
-	} = bench.setup(NUM_COMPS, NUM_ENTITIES)
-	let count = 0
+	} = data
+	for (let e = 0; e < NUM_ENTITIES; ++e) {
+		const bufNum = sha3.update(`num_${e}`).digest()
+		const bufAll = sha3.update(`all_${e}`).digest()
+		// Single component
+		const entitySingle = addEntity()
+		const singleComp = components[b2n(bufNum[bufNum.length - 1], NUM_COMPS)]
+		addComponent(entitySingle, singleComp)
+		// Some components
+		const entitySome = addEntity()
+		const someComps = []
+		for (let i = 0; i < NUM_SOME_COMPS; ++i) {
+			const comp = components[b2n(bufNum[i], NUM_COMPS)]
+			addComponent(entitySome, comp)
+			someComps.push(comp)
+		}
+		// All random components
+		const randComps = []
+		const entityAll = addEntity()
+		for (let i = 0; i < NUM_COMPS; ++i) {
+			if (getBit(bufAll, i)) {
+				addComponent(entityAll, components[i])
+				randComps.push(components[i])
+			}
+		}
+		// Keep track of entities and components
+		state.entities.push(entitySingle, entitySome, entityAll)
+		if (e % TO_REMOVE_MOD === 0) {
+			state.toRemove.push([singleComp], someComps, randComps)
+		}
+	}
+}
+
+function runQueries(data, state) {
+	const {
+		components,
+		addEntity,
+		removeEntity,
+		addComponent,
+		removeComponent,
+		queryEntities,
+	} = data
+}
+
+function datasetChallenge(data, state) {
+	const {
+		components,
+		addEntity,
+		removeEntity,
+		addComponent,
+		removeComponent,
+		queryEntities,
+	} = data
+}
+
+/* 
+
+
 	// Generate entities
 	let entities = []
 	for (let e = 0; e < NUM_ENTITIES; ++e) {
@@ -76,11 +158,11 @@ function runBench(bench) {
 	}
 	entities = keep
 	// Add new entities with unique combinations of components
-	// Use hash of index to determine which components to set
+	// Use sha3 of index to determine which components to set
 	// This is deterministic randomness, the same random for each run and library
 	const hits = []
 	for (let e = 0; e < NUM_ENTITIES; ++e) {
-		const buf = hash.update(e.toString()).digest()
+		const buf = sha3.update(e.toString()).digest()
 		// Keep track of matching component combinations
 		const comps = []
 		for (let i = 0; i < NUM_COMPS; ++i) {
@@ -98,7 +180,7 @@ function runBench(bench) {
 			entities.push(entity)
 		}
 	}
-	// Query for all hash generated component combinations
+	// Query for all sha3 generated component combinations
 	for (const hit of hits) {
 		queryEntities(hit, entity => {
 			++count
@@ -115,26 +197,20 @@ function runBench(bench) {
 	for (const entity of entities) {
 		removeEntity(entity)
 	}
-	// Calculate score (entities processed per millisecond)
-	const time = Date.now() - now
-	const score = EXPECTED_COUNT / time
-	if (count === EXPECTED_COUNT) {
-		log(`${bench.name}: PASS, ${score.toFixed(2)} ent/ms`)
-	} else {
-		log(
-			`${bench.name}: FAIL, completed ${count} queries (${(
-				(count / EXPECTED_COUNT) *
-				100
-			).toFixed(5)}%)`
-		)
-	}
-}
+
+*/
 
 // Get bit at index i in buffer
 function getBit(buf, i) {
 	const byteIndex = Math.floor(i / 8)
 	const bitIndex = i % 8
 	return (buf[byteIndex] >> bitIndex) & 1
+}
+
+// Byte to number
+function b2n(byte, max) {
+	const ratio = max / 256
+	return Math.ceil(byte * ratio)
 }
 
 async function main() {
