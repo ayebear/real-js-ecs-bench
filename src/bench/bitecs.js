@@ -27,7 +27,7 @@ function str2id(str) {
 
 export default {
 	name: 'bitecs',
-	enable: false,
+	enable: true,
 	setup(nc) {
 		this.world = createWorld()
 		const components = []

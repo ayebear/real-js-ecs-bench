@@ -2,11 +2,11 @@ import { log } from './log.js'
 import { SHA3 } from 'sha3'
 
 const HASH_SIZE = 256
-const NUM_ENTITIES = 10000
+const NUM_ENTITIES = 1000
 const NUM_COMPS = 200 // Must be less than HASH_SIZE
 const NUM_SOME_COMPS = HASH_SIZE / 8 - 1
 const TO_REMOVE_MOD = 4
-const EXPECTED_COUNT = 21954852
+const EXPECTED_COUNT = 740856
 const sha3 = new SHA3(HASH_SIZE)
 
 function runBench(bench) {
@@ -99,13 +99,13 @@ function datasetChallenge(data, state) {
 		}
 	}
 	// Delete entities marked for deletion
-	queryEntities(components[components.length - 1], entity => {
+	queryEntities([components[components.length - 1]], entity => {
 		++state.count
 		removeEntity(entity)
 	})
 	// Remove all other components
 	for (let i = 0; i < NUM_COMPS; ++i) {
-		queryEntities(components[i], entity => {
+		queryEntities([components[i]], entity => {
 			++state.count
 			for (let j = 0; j < NUM_COMPS; ++j) {
 				if (j === i) {
@@ -118,7 +118,7 @@ function datasetChallenge(data, state) {
 	}
 	// Remove remaining entities
 	for (let i = 0; i < NUM_COMPS; ++i) {
-		queryEntities(components[i], entity => {
+		queryEntities([components[i]], entity => {
 			++state.count
 			removeEntity(entity)
 		})

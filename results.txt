@@ -1,3 +1,3 @@
 CPU: AMD Ryzen 9 5900HS with Radeon Graphics (16-core)
-bitecs: SKIPPED
-picoes: PASS, 2267.59 ops/ms
+bitecs: PASS, 23.81 ops/ms
+picoes: PASS, 2764.39 ops/ms
