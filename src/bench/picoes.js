@@ -23,7 +23,9 @@ export default {
 				entity.remove(component)
 			},
 			queryEntities: (comps, callback) => {
-				this.world.each(comps, callback)
+				this.world.each(comps, (_, entity) => {
+					callback(entity)
+				})
 			},
 		}
 	},

@@ -1,8 +1,11 @@
 import { log } from './log.js'
+import { SHA3 } from 'sha3'
 
 const NUM_COMPS = 200
 const NUM_ENTITIES = 1000
-const EXPECTED_COUNT = 25150000
+const NUM_DUPE_HASH_ENTITIES = 10
+const EXPECTED_COUNT = 25160000
+const hash = new SHA3(256) // Must be more bits than NUM_COMPS
 
 function runBench(bench) {
 	const now = Date.now()
@@ -72,19 +75,38 @@ function runBench(bench) {
 		}
 	}
 	entities = keep
-	// TODO: Add new entities with unique combinations of components
+	// Add new entities with unique combinations of components
 	// Use hash of index to determine which components to set
+	// This is deterministic randomness, the same random for each run and library
 	const hits = []
 	for (let e = 0; e < NUM_ENTITIES; ++e) {
-		const entity = addEntity()
-		// sha512(e) => use each bit for each component index
-		entities.push(entity)
-		if (e % 2 === 0) {
-			// hits.push(comps)
+		const buf = hash.update(e.toString()).digest()
+		// Keep track of matching component combinations
+		const comps = []
+		for (let i = 0; i < NUM_COMPS; ++i) {
+			if (getBit(buf, i)) {
+				comps.push(components[i])
+			}
+		}
+		hits.push(comps)
+		// Create entities with components
+		for (let ee = 0; ee < NUM_DUPE_HASH_ENTITIES; ++ee) {
+			const entity = addEntity()
+			for (const comp of comps) {
+				addComponent(entity, comp)
+			}
+			entities.push(entity)
 		}
 	}
-	// Do more queries, ~50% hit using hash combos above
+	// Query for all hash generated component combinations
 	for (const hit of hits) {
+		queryEntities(hit, entity => {
+			++count
+		})
+	}
+	// Do queries again, but with last component not matching, to get all misses
+	for (const hit of hits) {
+		hit[hit.length - 1] += '_invalid'
 		queryEntities(hit, entity => {
 			++count
 		})
@@ -106,6 +128,13 @@ function runBench(bench) {
 			).toFixed(5)}%)`
 		)
 	}
+}
+
+// Get bit at index i in buffer
+function getBit(buf, i) {
+	const byteIndex = Math.floor(i / 8)
+	const bitIndex = i % 8
+	return (buf[byteIndex] >> bitIndex) & 1
 }
 
 async function main() {
