@@ -1,40 +1,8 @@
-import { World } from 'picoes'
-import si from 'systeminformation'
+import { log } from './log.js'
 
 const NUM_COMPS = 200
 const NUM_ENTITIES = 1000
 const EXPECTED_COUNT = 25150000
-
-// TODO: Move to separate file
-// TODO: Run in separate node.js instance, sequentially
-const picoBench = {
-	name: 'picoes',
-	setup(nc) {
-		this.world = new World()
-		const components = []
-		for (let i = 0; i < nc; ++i) {
-			components.push(i.toString())
-		}
-		return {
-			components,
-			addEntity: () => {
-				return this.world.entity()
-			},
-			removeEntity: entity => {
-				entity.destroy()
-			},
-			addComponent: (entity, component, value) => {
-				entity.set(component, value)
-			},
-			removeComponent: (entity, component) => {
-				entity.remove(component)
-			},
-			queryEntities: (comps, callback) => {
-				this.world.each(comps, callback)
-			},
-		}
-	},
-}
 
 function runBench(bench) {
 	const now = Date.now()
@@ -140,16 +108,10 @@ function runBench(bench) {
 	}
 }
 
-// Print to both stdout and stderr
-function log(...args) {
-	console.log(...args)
-	console.error(...args)
-}
-
 async function main() {
-	const cpu = await si.cpu()
-	log(`CPU: ${cpu.manufacturer} ${cpu.brand} (${cpu.cores}-core)`)
-	runBench(picoBench)
+	const benchPath = process.argv[2]
+	const { default: bench } = await import(benchPath)
+	runBench(bench)
 }
 
 await main()

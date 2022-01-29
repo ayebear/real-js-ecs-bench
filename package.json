@@ -2,15 +2,17 @@
 	"name": "real-js-ecs-bench",
 	"version": "1.0.0",
 	"description": "",
-	"main": "index.js",
+	"main": "src/main.js",
 	"type": "module",
 	"scripts": {
-		"bench": "node index.js > results.txt",
+		"bench": "node src/main.js > results.txt",
 		"test": "jest"
 	},
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@expo/spawn-async": "^1.6.0",
+		"globby": "^13.1.0",
 		"picoes": "^1.1.0-rc0",
 		"systeminformation": "^5.11.0"
 	}
