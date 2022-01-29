@@ -25,39 +25,35 @@ function str2id(str) {
 	return id
 }
 
-export default {
-	name: 'bitecs',
-	enable: true,
-	setup(nc) {
-		this.world = createWorld()
-		const components = []
-		for (let i = 0; i < nc; ++i) {
-			components.push(defineComponent({ strId: Types.ui32 }))
-		}
-		return {
-			components,
-			addEntity: () => {
-				return addEntity(this.world)
-			},
-			removeEntity: entity => {
-				removeEntity(this.world, entity)
-			},
-			addComponent: (entity, component, value) => {
-				addComponent(this.world, component, entity)
-				component.strId[entity] = str2id(value)
-			},
-			removeComponent: (entity, component) => {
-				removeComponent(this.world, component, entity)
-			},
-			queryEntities: (comps, callback) => {
-				// This causes major memory usage, so benchmark fails
-				// Would have to use bitECS in a way that isn't best practice,
-				// which may reduce performance significantly.
-				const ents = defineQuery(comps)(this.world)
-				for (const eid of ents) {
-					callback(eid)
-				}
-			},
-		}
-	},
+export default nc => {
+	const world = createWorld()
+	const components = []
+	for (let i = 0; i < nc; ++i) {
+		components.push(defineComponent({ strId: Types.ui32 }))
+	}
+	return {
+		components,
+		addEntity: () => {
+			return addEntity(world)
+		},
+		removeEntity: entity => {
+			removeEntity(world, entity)
+		},
+		addComponent: (entity, component, value) => {
+			addComponent(world, component, entity)
+			component.strId[entity] = str2id(value)
+		},
+		removeComponent: (entity, component) => {
+			removeComponent(world, component, entity)
+		},
+		queryEntities: (comps, callback) => {
+			// This causes major memory usage, so benchmark fails
+			// Would have to use bitECS in a way that isn't best practice,
+			// which may reduce performance significantly.
+			const ents = defineQuery(comps)(world)
+			for (const eid of ents) {
+				callback(eid)
+			}
+		},
+	}
 }

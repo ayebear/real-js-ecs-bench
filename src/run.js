@@ -1,3 +1,4 @@
+import path from 'path'
 import { log } from './log.js'
 import { SHA3 } from 'sha3'
 
@@ -9,10 +10,14 @@ const TO_REMOVE_MOD = 4
 const EXPECTED_COUNT = 740856
 const sha3 = new SHA3(HASH_SIZE)
 
-function runBench(bench) {
+function runBench(name, bench) {
 	// Run benchmark suite
 	const now = Date.now()
-	const data = bench.setup(NUM_COMPS + 1, NUM_ENTITIES)
+	const data = bench(NUM_COMPS + 1, NUM_ENTITIES)
+	if (data.enable === false) {
+		log(`${name}: DISABLED`)
+		return
+	}
 	const state = { count: 0, entities: [], toRemove: [] }
 	init(data, state)
 	runQueries(data, state)
@@ -22,10 +27,10 @@ function runBench(bench) {
 	const time = Date.now() - now
 	const score = state.count / time
 	if (state.count === EXPECTED_COUNT) {
-		log(`${bench.name}: PASS, ${score.toFixed(2)} ops/ms`)
+		log(`${name}: PASS, ${score.toFixed(2)} ops/ms`)
 	} else {
 		log(
-			`${bench.name}: FAIL, ${score.toFixed(2)} ops/ms, completed ${
+			`${name}: FAIL, ${score.toFixed(2)} ops/ms, completed ${
 				state.count
 			} ops (${((state.count / EXPECTED_COUNT) * 100).toFixed(5)}%)`
 		)
@@ -141,11 +146,8 @@ function b2n(byte, max) {
 async function main() {
 	const benchPath = process.argv[2]
 	const { default: bench } = await import(benchPath)
-	if (bench.enable === false) {
-		log(`${bench.name}: SKIPPED`)
-		return
-	}
-	runBench(bench)
+	const name = path.basename(benchPath, '.js')
+	runBench(name, bench)
 }
 
 await main()
