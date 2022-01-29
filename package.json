@@ -13,9 +13,11 @@
 	"dependencies": {
 		"@expo/spawn-async": "^1.6.0",
 		"bitecs": "^0.3.34",
+		"ecsy": "^0.4.2",
 		"globby": "^13.1.0",
 		"picoes": "^1.1.0-rc0",
 		"sha3": "^2.1.4",
-		"systeminformation": "^5.11.0"
+		"systeminformation": "^5.11.0",
+		"tiny-ecs": "^2.0.0"
 	}
 }
