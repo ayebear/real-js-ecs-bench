@@ -2,59 +2,52 @@ import { log } from './log.js'
 import { SHA3 } from 'sha3'
 
 const HASH_SIZE = 256
-const NUM_ENTITIES = 1000
+const NUM_ENTITIES = 10000
 const NUM_COMPS = 200 // Must be less than HASH_SIZE
 const NUM_SOME_COMPS = HASH_SIZE / 8 - 1
 const TO_REMOVE_MOD = 4
-const EXPECTED_COUNT = 25160000
+const EXPECTED_COUNT = 21954852
 const sha3 = new SHA3(HASH_SIZE)
 
 function runBench(bench) {
-	// Run benchmark suite, count entity hits
+	// Run benchmark suite
 	const now = Date.now()
-	const data = bench.setup(NUM_COMPS, NUM_ENTITIES)
+	const data = bench.setup(NUM_COMPS + 1, NUM_ENTITIES)
 	const state = { count: 0, entities: [], toRemove: [] }
 	init(data, state)
-	log(state)
 	runQueries(data, state)
 	datasetChallenge(data, state)
 
-	// Calculate score (entities processed per millisecond)
+	// Calculate score (operations completed per millisecond)
 	const time = Date.now() - now
-	const score = EXPECTED_COUNT / time
+	const score = state.count / time
 	if (state.count === EXPECTED_COUNT) {
-		log(`${bench.name}: PASS, ${score.toFixed(2)} ent/ms`)
+		log(`${bench.name}: PASS, ${score.toFixed(2)} ops/ms`)
 	} else {
 		log(
-			`${bench.name}: FAIL, completed ${state.count} queries (${(
-				(state.count / EXPECTED_COUNT) *
-				100
-			).toFixed(5)}%)`
+			`${bench.name}: FAIL, ${score.toFixed(2)} ops/ms, completed ${
+				state.count
+			} ops (${((state.count / EXPECTED_COUNT) * 100).toFixed(5)}%)`
 		)
 	}
 }
 
 function init(data, state) {
-	const {
-		components,
-		addEntity,
-		removeEntity,
-		addComponent,
-		removeComponent,
-		queryEntities,
-	} = data
+	const { components, addEntity, addComponent } = data
 	for (let e = 0; e < NUM_ENTITIES; ++e) {
 		const bufNum = sha3.update(`num_${e}`).digest()
 		const bufAll = sha3.update(`all_${e}`).digest()
 		// Single component
 		const entitySingle = addEntity()
 		const singleComp = components[b2n(bufNum[bufNum.length - 1], NUM_COMPS)]
+		++state.count
 		addComponent(entitySingle, singleComp)
 		// Some components
 		const entitySome = addEntity()
 		const someComps = []
 		for (let i = 0; i < NUM_SOME_COMPS; ++i) {
 			const comp = components[b2n(bufNum[i], NUM_COMPS)]
+			++state.count
 			addComponent(entitySome, comp)
 			someComps.push(comp)
 		}
@@ -63,6 +56,7 @@ function init(data, state) {
 		const entityAll = addEntity()
 		for (let i = 0; i < NUM_COMPS; ++i) {
 			if (getBit(bufAll, i)) {
+				++state.count
 				addComponent(entityAll, components[i])
 				randComps.push(components[i])
 			}
@@ -76,14 +70,14 @@ function init(data, state) {
 }
 
 function runQueries(data, state) {
-	const {
-		components,
-		addEntity,
-		removeEntity,
-		addComponent,
-		removeComponent,
-		queryEntities,
-	} = data
+	const { components, addComponent, queryEntities } = data
+	// Run all stored queries, mark certain entities for removal
+	for (const comps of state.toRemove) {
+		queryEntities(comps, entity => {
+			++state.count
+			addComponent(entity, components[components.length - 1])
+		})
+	}
 }
 
 function datasetChallenge(data, state) {
@@ -95,110 +89,41 @@ function datasetChallenge(data, state) {
 		removeComponent,
 		queryEntities,
 	} = data
-}
-
-/* 
-
-
-	// Generate entities
-	let entities = []
+	// Generate entities with all components
 	for (let e = 0; e < NUM_ENTITIES; ++e) {
-		entities.push(addEntity())
-	}
-	// Add all components to all the entities
-	for (let e = 0; e < NUM_ENTITIES; ++e) {
+		++state.count
+		const entity = addEntity()
 		for (let i = 0; i < NUM_COMPS; ++i) {
-			addComponent(entities[e], components[i], `${e}_${i}`)
+			++state.count
+			addComponent(entity, components[i], `${e}_${i}`)
 		}
 	}
-	// Do queries on the entities
-	for (let i = 0; i < NUM_COMPS; ++i) {
-		const comps = []
-		for (let j = 0; j <= i; ++j) {
-			comps.push(components[j])
-			queryEntities(comps, entity => {
-				++count
-			})
-		}
-	}
-	// Remove half the components
-	for (let e = 0; e < NUM_ENTITIES; ++e) {
-		for (let i = 0; i < NUM_COMPS; i += 2) {
-			removeComponent(entities[e], components[i])
-		}
-	}
-	// Do queries on what remains
-	for (let i = 1; i < NUM_COMPS; i += 2) {
-		const comps = []
-		for (let j = 1; j <= i; j += 2) {
-			comps.push(components[j])
-			queryEntities(comps, entity => {
-				++count
-			})
-		}
-	}
-	// Try a bunch of missed queries (should be 0)
-	for (let i = 0; i < NUM_COMPS; ++i) {
-		const comps = []
-		for (let j = 0; j <= i; ++j) {
-			comps.push(components[j])
-			queryEntities(comps, entity => {
-				++count
-			})
-		}
-	}
-	// Remove half the entities
-	const keep = []
-	for (let e = 0; e < entities.length; ++e) {
-		if (e % 2 === 0) {
-			keep.push(entities[e])
-		} else {
-			removeEntity(entities[e])
-		}
-	}
-	entities = keep
-	// Add new entities with unique combinations of components
-	// Use sha3 of index to determine which components to set
-	// This is deterministic randomness, the same random for each run and library
-	const hits = []
-	for (let e = 0; e < NUM_ENTITIES; ++e) {
-		const buf = sha3.update(e.toString()).digest()
-		// Keep track of matching component combinations
-		const comps = []
-		for (let i = 0; i < NUM_COMPS; ++i) {
-			if (getBit(buf, i)) {
-				comps.push(components[i])
-			}
-		}
-		hits.push(comps)
-		// Create entities with components
-		for (let ee = 0; ee < NUM_DUPE_HASH_ENTITIES; ++ee) {
-			const entity = addEntity()
-			for (const comp of comps) {
-				addComponent(entity, comp)
-			}
-			entities.push(entity)
-		}
-	}
-	// Query for all sha3 generated component combinations
-	for (const hit of hits) {
-		queryEntities(hit, entity => {
-			++count
-		})
-	}
-	// Do queries again, but with last component not matching, to get all misses
-	for (const hit of hits) {
-		hit[hit.length - 1] += '_invalid'
-		queryEntities(hit, entity => {
-			++count
-		})
-	}
-	// Delete entities
-	for (const entity of entities) {
+	// Delete entities marked for deletion
+	queryEntities(components[components.length - 1], entity => {
+		++state.count
 		removeEntity(entity)
+	})
+	// Remove all other components
+	for (let i = 0; i < NUM_COMPS; ++i) {
+		queryEntities(components[i], entity => {
+			++state.count
+			for (let j = 0; j < NUM_COMPS; ++j) {
+				if (j === i) {
+					continue
+				}
+				++state.count
+				removeComponent(entity, components[j])
+			}
+		})
 	}
-
-*/
+	// Remove remaining entities
+	for (let i = 0; i < NUM_COMPS; ++i) {
+		queryEntities(components[i], entity => {
+			++state.count
+			removeEntity(entity)
+		})
+	}
+}
 
 // Get bit at index i in buffer
 function getBit(buf, i) {
@@ -210,7 +135,7 @@ function getBit(buf, i) {
 // Byte to number
 function b2n(byte, max) {
 	const ratio = max / 256
-	return Math.ceil(byte * ratio)
+	return Math.floor(byte * ratio)
 }
 
 async function main() {
