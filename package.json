@@ -12,6 +12,7 @@
 	"license": "ISC",
 	"dependencies": {
 		"@expo/spawn-async": "^1.6.0",
+		"bitecs": "^0.3.34",
 		"globby": "^13.1.0",
 		"picoes": "^1.1.0-rc0",
 		"sha3": "^2.1.4",

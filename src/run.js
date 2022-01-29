@@ -141,6 +141,10 @@ function b2n(byte, max) {
 async function main() {
 	const benchPath = process.argv[2]
 	const { default: bench } = await import(benchPath)
+	if (bench.enable === false) {
+		log(`${bench.name}: SKIPPED`)
+		return
+	}
 	runBench(bench)
 }
 
