@@ -36,9 +36,9 @@ Create entities and add components.
 
 Query for entities by specifying components. Aim for n% hits spread out with mod. In each query, add toRemove component.
 
--   Query for 1/TO_REMOVE_MOD of A
--   Query for 1/TO_REMOVE_MOD of B
--   Query for 1/TO_REMOVE_MOD of C
+-   Query for 1/TO_REMOVE_MOD of single component entities
+-   Query for 1/TO_REMOVE_MOD of entities with some components
+-   Query for 1/TO_REMOVE_MOD of entities with many random components
 
 ### More dataset operations
 
